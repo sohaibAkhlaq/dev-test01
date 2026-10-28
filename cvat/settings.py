@@ -34,10 +34,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'cvat.urls'
 
+REACT_DIST = BASE_DIR / 'frontend-react' / 'dist'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'frontend'],
+        'DIRS': [REACT_DIST, BASE_DIR / 'frontend'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -68,7 +70,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'frontend']
+STATICFILES_DIRS = [REACT_DIST, BASE_DIR / 'frontend'] if REACT_DIST.exists() else [BASE_DIR / 'frontend']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
