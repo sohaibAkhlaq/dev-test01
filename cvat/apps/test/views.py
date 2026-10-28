@@ -4,7 +4,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 
@@ -18,11 +18,11 @@ class TaskAnnotationAnalyticsView(APIView):
     URL: /api/v1/tasks/{id}/annotations/analytics
     
     Security:
-    - Enforces CVAT authentication (BasicAuth / SessionAuth).
+    - Enforces CVAT authentication (TokenAuth / SessionAuth / BasicAuth).
     - Unauthenticated requests are rejected with 401 Unauthorized.
     - Authenticated users without access to the task are rejected with 403 Forbidden.
     """
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, pk: int):
