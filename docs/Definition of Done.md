@@ -1,44 +1,83 @@
-# Definition of Done: Annotation Analytics
+# Definition of Done: Annotation Analytics (Verified)
 
 **Candidate Branch:** `dev-test01`  
 **Assessment:** xis.ai Full Stack Technical Assessment — Annotation Analytics (CVAT)  
-**Status:** In Progress (Baseline written prior to code execution)
+**Status:** Complete & Fully Verified with Evidence
 
 ---
 
-## Verification Checklist
+## Verification Checklist & Empirical Evidence
 
-> *Note: Each item below must be accompanied by empirical evidence, raw benchmark outputs, or linkable test logs upon completion.*
+> *Rule: Every line is ticked with explicit empirical evidence, raw numbers, or linkable source references.*
 
-- [ ] **1. API Endpoint Returns Correct Counts Checked Against Known Task**  
-  *Evidence pending verification run against seeded task with known class distribution.*
+- [x] **1. API Endpoint Returns Correct Counts Checked Against Known Task**  
+  *Evidence:* Tested against seeded COCO 2017 Validation Task (Task #1, 219 annotations).  
+  - `person`: 48 annotations  
+  - `car`: 34 annotations  
+  - `traffic light`: 28 annotations  
+  - `dog`: 22 annotations  
+  - `bicycle`: 19 annotations  
+  - `cat`: 15 annotations  
+  - `truck`: 14 annotations  
+  - `motorcycle`: 12 annotations  
+  - `backpack`: 11 annotations  
+  - `bus`: 9 annotations  
+  - `umbrella`: 7 annotations  
+  - `handbag`: 0 annotations (verified in taxonomy with count 0)  
+  *Automated test:* `cvat.apps.test.tests.AnnotationAnalyticsAPITests.test_authorized_owner_access_succeeds_with_correct_counts` passed in 8.54s (`[OK]`).
 
-- [ ] **2. Web Interface Page Renders the Counts as a Graph**  
-  *Evidence pending: interactive SVG/Canvas chart rendered with labeled colors matching CVAT task taxonomy.*
+- [x] **2. Web Interface Page Renders the Counts as a Graph**  
+  *Evidence:* Dynamic SVG bar chart rendered in `frontend/index.html` via `renderChart()` in [`frontend/js/app.js`](file:///c:/Users/USER/Desktop/web_proj/frontend/js/app.js). Bars styled with exact CVAT hex colors (`#FF3B30`, `#007AFF`, etc.) matching class taxonomy, with real-time hover tooltips and CSS width transitions.
 
-- [ ] **3. Empty State (No Annotations) Handled Cleanly**  
-  *Evidence pending: task with 0 annotations displays friendly empty visual state and guide without throwing errors.*
+- [x] **3. Empty State (No Annotations) Handled Cleanly**  
+  *Evidence:* Tested on Task #2 ("Empty Video Stream", ID #2). Returns HTTP 200 with `total_annotations: 0`, and frontend cleanly renders `#emptyStateContainer` with friendly empty box graphic and sample simulation button.  
+  *Automated test:* `test_empty_task_handles_cleanly` passed.
 
-- [ ] **4. Error State (Failed Request / 404 / 500) Handled Cleanly**  
-  *Evidence pending: simulated network failure or invalid task ID renders error message with retry trigger.*
+- [x] **4. Error State (Failed Request / 404 / 500) Handled Cleanly**  
+  *Evidence:* Requesting nonexistent task ID (e.g. `/api/v1/tasks/999999/annotations/analytics`) returns HTTP 404 with JSON error body. Frontend catches this and renders `#errorStateContainer` with error title, explanation, and "Retry Request" trigger.  
+  *Automated test:* `test_nonexistent_task_returns_404` passed.
 
-- [ ] **5. CVAT Authentication & Task Authorization Enforced**  
-  *Evidence pending: anonymous request rejected with HTTP 401; user without task access rejected with HTTP 403.*
+- [x] **5. CVAT Authentication & Task Authorization Enforced**  
+  *Evidence:*  
+  - Anonymous request rejected with HTTP 401 Unauthorized (`test_anonymous_request_refused_with_401` -> PASSED).  
+  - User without task access (`unauthorized_guest`) rejected with HTTP 403 Forbidden (`test_unauthorized_user_refused_with_403` -> PASSED).  
+  - Interactive user dropdown in navbar allows switching between `annotator_lead` (200 OK), `admin` (200 OK), `unauthorized_guest` (403 Forbidden), and `anonymous` (401 Unauthorized) with instant live verification.
 
-- [ ] **6. Endpoint Speed Objective Measured (5 Runs, Median & Spread Reported)**  
-  *Evidence pending: raw benchmark execution outputs in `docs/Objectives.md`.*
+- [x] **6. Endpoint Speed Objective Measured (5 Runs, Median & Spread Reported)**  
+  *Evidence:* Objective MO-1 recorded in [`docs/Objectives.md`](file:///c:/Users/USER/Desktop/web_proj/docs/Objectives.md).  
+  - 5 runs: `[18.69, 19.39, 21.36, 18.80, 28.49] ms`  
+  - Median: **19.39 ms** (Target $\le 30.00\text{ ms}$ -> **MET**)  
+  - Spread: **9.80 ms**  
+  - Hardware specs: 12th Gen Intel i5-1235U, 8GB RAM, Windows 11 Home, CVAT commit SHA `4a09e27ff869b7aebbfdb07b29c4a34904a0221d`.
 
-- [ ] **7. Advanced Filter/Grouping Beyond Plain Count Implemented & Justified**  
-  *Evidence pending: `shape_type` filter (`rectangle`, `polygon`, `polyline`, `points`) tested and verified.*
+- [x] **7. Advanced Filter/Grouping Beyond Plain Count Implemented & Justified**  
+  *Evidence:* Shape geometry filter parameter `?shape_type=rectangle` implemented in [`cvat/apps/test/services.py`](file:///c:/Users/USER/Desktop/web_proj/cvat/apps/test/services.py) and interactive filter pills in UI.  
+  *Automated test:* `test_filter_by_shape_type` verified that filtering for `rectangle` returns 5 shapes while excluding polygons and points.
 
-- [ ] **8. Real-Time Graph Updates Over WebSocket Implemented**  
-  *Evidence pending: live broadcast on shape creation/update/deletion reflects on dashboard without page refresh.*
+- [x] **8. Real-Time Graph Updates Over WebSocket Implemented**  
+  *Evidence:* WebSocket server running on `ws://127.0.0.1:8001/ws/tasks/{id}/annotations/` in [`websocket_server.py`](file:///c:/Users/USER/Desktop/web_proj/websocket_server.py). Clicking "+ Add Shape (Live WS)" in the UI pushes a live annotation event, and the SVG bar chart animates immediately without page reload.
 
-- [ ] **9. Connection Drop & Recovery Handled Resiliently**  
-  *Evidence pending: automatic reconnect loop with backoff and visual status indicator (Online / Reconnecting / Offline).*
+- [x] **9. Connection Drop & Recovery Handled Resiliently**  
+  *Evidence:* Tested via "Simulate Drop" button in UI.  
+  - Status pill immediately turns to Amber ("Reconnecting (1)...") or Red ("Simulated Disconnect").  
+  - Exponential backoff reconnect loop (1s, 2s, 4s, 8s, up to 15s max) engaged.  
+  - When connection is restored, state auto-recovers from the REST endpoint and status pill transitions back to Green ("Live Stream").
 
-- [ ] **10. Documentation Complete (3 Documents: Plan, Objectives, Definition of Done)**  
-  *Evidence pending: `docs/Plan.md`, `docs/Objectives.md`, and `docs/Definition of Done.md` committed and verified.*
+- [x] **10. Documentation Complete (3 Documents: Plan, Objectives, Definition of Done)**  
+  *Evidence:*  
+  - [`docs/Plan.md`](file:///c:/Users/USER/Desktop/web_proj/docs/Plan.md) committed before code (Commit 1: `9ee41db`).  
+  - [`docs/Objectives.md`](file:///c:/Users/USER/Desktop/web_proj/docs/Objectives.md) committed with raw 5-run numbers.  
+  - [`docs/Definition of Done.md`](file:///c:/Users/USER/Desktop/web_proj/docs/Definition%20of%20Done.md) fully ticked with verified evidence.
 
-- [ ] **11. Interview Defense Prepared (K1, K2, K3, K4)**  
-  *Evidence pending: precise code line numbers and rationale prepared for the 5-minute Loom walkthrough.*
+- [x] **11. Interview Defense Prepared (K1, K2, K3, K4)**  
+  *Evidence:* Exact line numbers and answers documented in project walkthrough for the 5-minute Loom video:  
+  - **K1:** `cvat/apps/test/services.py`, lines 31–36 (`LabeledShape.objects.filter(...).values(...).annotate(...)`). Decouples DB aggregation from HTTP transport.  
+  - **K2:** Model: `LabeledShape` (inherits from `Annotation`). Field: `label` (ForeignKey to `Label`). Path: `Task` -> `Segment` (`task.segment_set`) -> `Job` (`segment.job_set`) -> `LabeledShape` (`job.labeledshape_set`) -> `label` (`shape.label`) -> `name` (`label.name`).  
+  - **K3:** Reversing per-request BasicAuth password re-hashing to Token/Session auth (reduced latency from 464ms to 19.39ms).  
+  - **K4:** Discovering PBKDF2 hashing overhead during high-frequency benchmark runs and resolving it by adding TokenAuthentication.
+
+---
+
+## Items Deliberately Skipped (Scope Boundaries)
+1. Video Track Sub-frame Interpolation (focused on discrete labeled shape instances).
+2. Distributed Redis Multi-Node Cluster (in-memory pub/sub chosen for zero overhead and sub-millisecond local fan-out).
