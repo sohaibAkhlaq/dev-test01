@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CVAT Annotation Analytics | xis.ai Technical Assessment</title>
+  <meta name="description" content="Production-ready real-time CVAT Annotation Analytics dashboard with database-level aggregation, live WebSocket streaming, and fault tolerance.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+      <div class="brand-section">
+        <div class="brand-icon">CV</div>
+        <div class="brand-titles">
+          <h1>
+            CVAT Annotation Analytics
+            <span class="brand-badge">xis.ai Assessment</span>
+          </h1>
+          <p>Real-time dataset class distribution, database aggregation & stream recovery</p>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <!-- Live WebSocket Connection Pill (Requirements 8 & 9) -->
+        <div id="wsStatusPill" class="status-pill online" title="WebSocket Live Stream Status">
+          <span class="status-dot"></span>
+          <span id="wsStatusText">Live Stream</span>
+        </div>
+
+        <!-- Task Selector -->
+        <label for="taskSelect" class="filter-label" style="display:none;">Task</label>
+        <select id="taskSelect" class="custom-select" title="Select Task to analyze">
+          <option value="1">Task #1: COCO 2017 Val (Object Detection)</option>
+          <option value="2">Task #2: Empty Video Stream (0 Annotations)</option>
+          <option value="3">Task #3: Urban Drone Survey 4K</option>
+        </select>
+
+        <!-- User Role Switcher for Auth / Permission Testing (Requirement 5) -->
+        <label for="userAuthSelect" class="filter-label" style="display:none;">User</label>
+        <select id="userAuthSelect" class="custom-select" title="Switch User for Access Control verification">
+          <option value="annotator_lead">User: Task Owner (200 OK)</option>
+          <option value="admin">User: Superuser Admin (200 OK)</option>
+          <option value="unauthorized_guest">User: Unauthorized Guest (403 Forbidden)</option>
+          <option value="anonymous">User: Anonymous (401 Unauthorized)</option>
+        </select>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Dark/Light Mode">
+          <span id="themeIcon">☀️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Metrics Summary Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Annotations</div>
+        <div id="kpiTotalAnnotations" class="kpi-value">0</div>
+        <div class="kpi-footer">Indexed shapes in database</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Active Classes</div>
+        <div id="kpiActiveClasses" class="kpi-value">0 / 0</div>
+        <div class="kpi-footer">Represented in current task</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Primary Geometry</div>
+        <div id="kpiPrimaryGeometry" class="kpi-value">RECTANGLE</div>
+        <div class="kpi-footer">Dominant spatial annotation type</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">API Latency / Speed</div>
+        <div id="latencyBadge" class="kpi-value" style="color: var(--accent-green);">12.4 ms</div>
+        <div id="kpiJobsCount" class="kpi-footer">1 Job (DB Aggregation)</div>
+      </div>
+    </section>
+
+    <!-- Control Bar: Geometry Filter & Live Simulation Actions -->
+    <section class="controls-card">
+      <div class="filter-group">
+        <span class="filter-label">Filter Geometry:</span>
+        <button class="filter-pill active" data-filter="">All Shapes</button>
+        <button class="filter-pill" data-filter="rectangle">Rectangles</button>
+        <button class="filter-pill" data-filter="polygon">Polygons</button>
+        <button class="filter-pill" data-filter="points">Points</button>
+        <button class="filter-pill" data-filter="polyline">Polylines</button>
+      </div>
+
+      <div class="sim-actions">
+        <!-- Live WebSocket Action Triggers (Requirement 8) -->
+        <button id="simAddShapeBtn" class="btn btn-primary btn-sm" title="Emit live annotation creation over WebSocket">
+          + Add Shape (Live WS)
+        </button>
+        <button id="simDeleteShapeBtn" class="btn btn-secondary btn-sm" title="Emit live annotation deletion over WebSocket">
+          − Delete Shape (Live WS)
+        </button>
+        <!-- Drop & Recovery Trigger (Requirement 9) -->
+        <button id="simDropWsBtn" class="btn btn-secondary btn-sm" title="Simulate dropping WebSocket connection to demonstrate recovery">
+          Simulate Drop
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Dashboard Content Container -->
+    <main id="dashboardContent">
+      <div class="viz-grid">
+        <!-- Dynamic Graph Card (Requirement 3) -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Annotation Distribution by Class</h2>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">Direct SQL GROUP BY Count</div>
+          </div>
+          <div id="chartArea" class="chart-container">
+            <!-- Dynamic SVG Chart injected here -->
+          </div>
+        </div>
+
+        <!-- Geometry Breakdown Panel -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Geometry Breakdown</h2>
+          </div>
+          <div id="geometryBreakdownList" class="breakdown-list">
+            <!-- Breakdown list items injected here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Data Table (Core Functional Requirement 1) -->
+      <section class="table-card">
+        <div class="table-toolbar">
+          <input 
+            type="text" 
+            id="classSearchInput" 
+            class="custom-input search-box" 
+            placeholder="Search class names (e.g. person, car)..."
+          >
+          <div class="table-actions">
+            <!-- CSV & JSON Export (Core Functional Requirement 3) -->
+            <button id="exportCsvBtn" class="btn btn-secondary btn-sm">Export CSV</button>
+            <button id="exportJsonBtn" class="btn btn-secondary btn-sm">Export JSON</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="sortable-th" data-col="name">Class Name <span class="sort-icon">⇅</span></th>
+                <th class="sortable-th" data-col="color">Hex Color <span class="sort-icon">⇅</span></th>
+                <th class="sortable-th" data-col="count">Annotations Count <span class="sort-icon">▼</span></th>
+                <th>Share of Task</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- Rows injected here -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Empty State Container (Requirement 4) -->
+    <section id="emptyStateContainer" class="state-box" style="display:none;">
+      <div class="state-icon">📂</div>
+      <h3 class="state-title">No Annotations Found</h3>
+      <p class="state-desc">
+        This task currently contains zero annotated shapes in the database. 
+        Annotate images in CVAT or click "+ Add Shape (Live WS)" to simulate incoming labels.
+      </p>
+      <button class="btn btn-primary" onclick="simulateLiveAnnotationAction('simulate_annotation')">
+        Simulate Sample Annotation
+      </button>
+    </section>
+
+    <!-- Error State Container (Requirement 4 & 5) -->
+    <section id="errorStateContainer" class="state-box error-state" style="display:none;">
+      <div class="state-icon">⚠️</div>
+      <h3 id="errorTitle" class="state-title">Request Failed</h3>
+      <p id="errorDescription" class="state-desc">
+        An error occurred while communicating with the CVAT API.
+      </p>
+      <button class="btn btn-secondary" onclick="loadTaskAnalytics(state.currentTaskId)">
+        Retry Request
+      </button>
+    </section>
+
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
